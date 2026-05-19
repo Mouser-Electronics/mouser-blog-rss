@@ -1,0 +1,47 @@
+name: Refresh RSS
+
+on:
+  schedule:
+    - cron: "13 * * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run script
+        run: |
+          python3 - << 'EOF'
+          import urllib.request
+          import sys
+
+          URL = "https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20"
+
+          try:
+              req = urllib.request.Request(URL, headers={
+                  'User-Agent': 'Mozilla/5.0'
+              })
+              data = urllib.request.urlopen(req, timeout=20).read()
+
+              # reject HTML block pages
+              if b"<html" in data[:200].lower():
+                  print("Blocked - keeping old feed")
+                  sys.exit(0)
+
+              open("feed.xml", "wb").write(data)
+              print("Updated feed")
+
+          except Exception as e:
+              print("Error:", e)
+              sys.exit(0)
+          EOF
+
+      - name: Commit
+        run: |
+          git config user.name "bot"
+          git config user.email "bot@github.com"
+          git add feed.xml
+          git diff --quiet || (git commit -m "update feed" && git push)
