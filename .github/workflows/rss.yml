@@ -13,23 +13,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Fetch Mouser RSS via rss2json
+      - name: Fetch Mouser RSS (browser simulation)
         run: |
           curl -L \
-            "https://api.rss2json.com/v1/api.json?rss_url=https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
-            -o raw.json
-
-      - name: Convert JSON to RSS
-        run: |
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > feed.xml
-          echo '<rss version="2.0"><channel><title>Mouser Blog</title><link>https://www.mouser.com/blog</link><description>Mouser Blog Feed</description>' >> feed.xml
-
-          jq -r '.items[] | "<item><title>\(.title)</title><link>\(.link)</link><description>\(.description)</description></item>"' raw.json >> feed.xml
-
-          echo '</channel></rss>' >> feed.xml
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+            -H "Accept: application/rss+xml,application/xml;q=0.9,*/*;q=0.8" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            -H "Connection: keep-alive" \
+            "https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
+            -o feed.xml
 
       - name: Commit updated feed
         run: |
