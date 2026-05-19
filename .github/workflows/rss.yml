@@ -13,12 +13,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch Mouser RSS
+      - name: Fetch Mouser RSS via proxy
         run: |
           curl -L \
             "https://api.allorigins.win/raw?url=https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
             -o feed.xml
-      
 
       - name: Commit updated feed
         run: |
