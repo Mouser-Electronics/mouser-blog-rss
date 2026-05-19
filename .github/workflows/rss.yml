@@ -20,7 +20,7 @@ jobs:
         run: |
           npm init -y
           npm install playwright
-          npx playwright install
+          npx playwright install chromium
 
       - name: Fetch RSS using real browser
         run: |
@@ -29,24 +29,42 @@ jobs:
           const fs = require('fs');
 
           (async () => {
-            const browser = await chromium.launch();
-            const page = await browser.newPage();
+            const browser = await chromium.launch({
+              headless: true,
+              args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+
+            const context = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+              viewport: { width: 1280, height: 800 }
+            });
+
+            const page = await context.newPage();
 
             const url = "https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20";
 
-            await page.goto(url, { waitUntil: 'networkidle' });
+            try {
+              await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-            const content = await page.content();
+              // Let Akamai / JS settle
+              await page.waitForTimeout(8000);
 
-            // Extract the RSS XML portion only
-            const rssMatch = content.match(/<rss[\s\S]*<\/rss>/);
+              const content = await page.content();
 
-            if (rssMatch) {
-              fs.writeFileSync('feed.xml', rssMatch[0]);
-              console.log("✅ RSS extracted");
-            } else {
-              console.log("❌ RSS not found");
-              fs.writeFileSync('feed.xml', content);
+              // Extract ONLY RSS XML
+              const match = content.match(/<rss[\s\S]*<\/rss>/);
+
+              if (match) {
+                fs.writeFileSync('feed.xml', match[0]);
+                console.log("✅ RSS extracted");
+              } else {
+                fs.writeFileSync('feed.xml', content);
+                console.log("❌ RSS not found — likely still blocked");
+              }
+
+            } catch (err) {
+              console.error("❌ Browser fetch failed:", err);
+              fs.writeFileSync('feed.xml', 'ERROR FETCHING RSS');
             }
 
             await browser.close();
