@@ -16,16 +16,42 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch RSS via Textise proxy
+      - name: Install Playwright
         run: |
-          curl -L \
-            "https://textise.net/showtext.aspx?strURL=https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
-            -o raw.html
+          npm init -y
+          npm install playwright
+          npx playwright install
 
-      - name: Extract RSS from proxy
+      - name: Fetch RSS using real browser
         run: |
-          # Extract only RSS portion
-          sed -n '/<rss/,/<\/rss>/p' raw.html > feed.xml
+          node << 'EOF'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+
+            const url = "https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20";
+
+            await page.goto(url, { waitUntil: 'networkidle' });
+
+            const content = await page.content();
+
+            // Extract the RSS XML portion only
+            const rssMatch = content.match(/<rss[\s\S]*<\/rss>/);
+
+            if (rssMatch) {
+              fs.writeFileSync('feed.xml', rssMatch[0]);
+              console.log("✅ RSS extracted");
+            } else {
+              console.log("❌ RSS not found");
+              fs.writeFileSync('feed.xml', content);
+            }
+
+            await browser.close();
+          })();
+          EOF
 
       - name: Commit updated feed
         run: |
