@@ -13,11 +13,22 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch Mouser RSS via proxy
+      - name: Fetch Mouser RSS (rss2json proxy)
         run: |
           curl -L \
-            "https://api.allorigins.win/raw?url=https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
-            -o feed.xml
+            "https://api.rss2json.com/v1/api.json?rss_url=https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
+            -o raw.json
+
+            
+      - name: Convert JSON to RSS
+        run: |
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > feed.xml
+          echo '<rss version="2.0"><channel><title>Mouser Blog</title>' >> feed.xml
+    
+          jq -r '.items[] | "<item><title>\(.title)</title><link>\(.link)</link></item>"' raw.json >> feed.xml
+    
+          echo '</channel></rss>' >> feed.xml
+
 
       - name: Commit updated feed
         run: |
