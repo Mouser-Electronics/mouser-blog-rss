@@ -16,15 +16,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch Mouser RSS (browser simulation)
+      - name: Fetch RSS via Textise proxy
         run: |
           curl -L \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-            -H "Accept: application/rss+xml,application/xml;q=0.9,*/*;q=0.8" \
-            -H "Accept-Language: en-US,en;q=0.9" \
-            -H "Connection: keep-alive" \
-            "http://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
-            -o feed.xml
+            "https://textise.net/showtext.aspx?strURL=https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
+            -o raw.html
+
+      - name: Extract RSS from proxy
+        run: |
+          # Extract only RSS portion
+          sed -n '/<rss/,/<\/rss>/p' raw.html > feed.xml
 
       - name: Commit updated feed
         run: |
