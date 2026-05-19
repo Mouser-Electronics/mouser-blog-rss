@@ -12,32 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run script
-        run: |
-          python3 - << 'EOF'
-          import urllib.request
-          import sys
-
-          URL = "https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20"
-
-          try:
-              req = urllib.request.Request(URL, headers={
-                  'User-Agent': 'Mozilla/5.0'
-              })
-              data = urllib.request.urlopen(req, timeout=20).read()
-
-              # reject HTML block pages
-              if b"<html" in data[:200].lower():
-                  print("Blocked - keeping old feed")
-                  sys.exit(0)
-
-              open("feed.xml", "wb").write(data)
-              print("Updated feed")
-
-          except Exception as e:
-              print("Error:", e)
-              sys.exit(0)
-          EOF
+      - name: Fetch Mouser RSS
+  run: |
+    curl -v -L \
+      -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+      -H "Accept: application/rss+xml,application/xml;q=0.9,*/*;q=0.8" \
+      "https://www.mouser.com/blog/DesktopModules/LiveBlog/Handlers/Syndication.ashx?mid=1009&PortalId=11&tid=545&ItemCount=20" \
+      -o feed.xml
 
       - name: Commit
         run: |
