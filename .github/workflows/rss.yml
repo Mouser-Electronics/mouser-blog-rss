@@ -1,5 +1,8 @@
 name: Refresh RSS
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: "13 * * * *"
